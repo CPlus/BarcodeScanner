@@ -40,12 +40,8 @@ final class DecodeFormatManager {
                                  BarcodeFormat.EAN_13,
                                  BarcodeFormat.EAN_8,
                                  BarcodeFormat.RSS_14);
-    ONE_D_FORMATS = EnumSet.of(BarcodeFormat.CODE_39,
-                               BarcodeFormat.CODE_93,
-                               BarcodeFormat.CODE_128,
-                               BarcodeFormat.ITF,
-                               BarcodeFormat.CODABAR);
-    ONE_D_FORMATS.addAll(PRODUCT_FORMATS);
+    ONE_D_FORMATS = EnumSet.of(BarcodeFormat.CODE_128);
+    
   }
 
   private DecodeFormatManager() {}
@@ -81,7 +77,7 @@ final class DecodeFormatManager {
       }
     }
     if (decodeMode != null) {
-      if (Intents.Scan.PRODUCT_MODE.equals(decodeMode)) {
+      /*if (Intents.Scan.PRODUCT_MODE.equals(decodeMode)) {
         return PRODUCT_FORMATS;
       }
       if (Intents.Scan.QR_CODE_MODE.equals(decodeMode)) {
@@ -89,7 +85,7 @@ final class DecodeFormatManager {
       }
       if (Intents.Scan.DATA_MATRIX_MODE.equals(decodeMode)) {
         return DATA_MATRIX_FORMATS;
-      }
+      }*/
       if (Intents.Scan.ONE_D_MODE.equals(decodeMode)) {
         return ONE_D_FORMATS;
       }
