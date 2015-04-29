@@ -13,6 +13,7 @@
 #import <AudioToolbox/AudioToolbox.h>
 
 #import <Cordova/CDVPlugin.h>
+#import <Cordova/CDVViewController.h>
 
 
 //------------------------------------------------------------------------------
@@ -77,6 +78,8 @@
 - (void)barcodeScanSucceeded:(NSString*)text format:(NSString*)format;
 - (void)barcodeScanFailed:(NSString*)message;
 - (void)barcodeScanCancelled;
+- (void)barcodeScanCancelledHistory;
+- (void)barcodeScanCancelledInfo;
 - (void)openDialog;
 - (NSString*)setUpCaptureSession;
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection *)connection;
@@ -111,8 +114,9 @@
 - (void)startCapturing;
 - (UIView*)buildOverlayView;
 - (UIImage*)buildReticleImage;
-- (void)shutterButtonPressed;
 - (IBAction)cancelButtonPressed:(id)sender;
+- (IBAction)historyButtonPressed:(id)sender;
+- (IBAction)infoButtonPressed:(id)sender;
 
 @end
 
@@ -160,11 +164,11 @@
                  parentViewController:self.viewController
                  alterateOverlayXib:overlayXib
                  ];
-    #if CLEANUP_REFERENCES    
+#if CLEANUP_REFERENCES
     [processor retain];
     [processor retain];
     [processor retain];
-    #endif
+#endif
     // queue [processor scanBarcode] to run on the event loop
     [processor performSelector:@selector(scanBarcode) withObject:nil afterDelay:0];
 }
@@ -184,22 +188,22 @@
                  stringToEncode: command.arguments[0][@"data"]
                  ];
     
-    #if CLEANUP_REFERENCES    
+#if CLEANUP_REFERENCES
     [processor retain];
     [processor retain];
     [processor retain];
-    #endif
+#endif
     // queue [processor generateImage] to run on the event loop
     [processor performSelector:@selector(generateImage) withObject:nil afterDelay:0];
 }
 
 - (void)returnImage:(NSString*)filePath format:(NSString*)format callback:(NSString*)callback{
-    #if CLEANUP_REFERENCES    
+#if CLEANUP_REFERENCES
     NSMutableDictionary* resultDict = [[[NSMutableDictionary alloc] init] autorelease];
-    #else
+#else
     NSMutableDictionary* resultDict = [[NSMutableDictionary alloc] init];
-    #endif
-
+#endif
+    
     [resultDict setObject:format forKey:@"format"];
     [resultDict setObject:filePath forKey:@"file"];
     
@@ -295,16 +299,16 @@ parentViewController:(UIViewController*)parentViewController
     AudioServicesRemoveSystemSoundCompletion(_soundFileObject);
     AudioServicesDisposeSystemSoundID(_soundFileObject);
     
-    #if CLEANUP_REFERENCES    
+#if CLEANUP_REFERENCES
     [super dealloc];
-    #endif
+#endif
 }
 
 //--------------------------------------------------------------------------
 - (void)scanBarcode {
     
-//    self.captureSession = nil;
-//    self.previewLayer = nil;
+    //    self.captureSession = nil;
+    //    self.previewLayer = nil;
     NSString* errorMessage = [self setUpCaptureSession];
     if (errorMessage) {
         [self barcodeScanFailed:errorMessage];
@@ -360,6 +364,24 @@ parentViewController:(UIViewController*)parentViewController
     }
 }
 
+//--------------------------------------------------------------------------
+- (void)barcodeScanCancelledHistory {
+    [self barcodeScanDone];
+    [self.plugin returnSuccess:@"history" format:@"" cancelled:TRUE flipped:self.isFlipped callback:self.callback];
+    if (self.isFlipped) {
+        self.isFlipped = NO;
+    }
+}
+
+//--------------------------------------------------------------------------
+- (void)barcodeScanCancelledInfo {
+    [self barcodeScanDone];
+    [self.plugin returnSuccess:@"info" format:@"" cancelled:TRUE flipped:self.isFlipped callback:self.callback];
+    if (self.isFlipped) {
+        self.isFlipped = NO;
+    }
+}
+
 
 - (void)flipCamera
 {
@@ -367,27 +389,6 @@ parentViewController:(UIViewController*)parentViewController
     self.isFrontCamera = !self.isFrontCamera;
     [self performSelector:@selector(barcodeScanCancelled) withObject:nil afterDelay:0];
     [self performSelector:@selector(scanBarcode) withObject:nil afterDelay:0.1];
-}
-
-- (void) autoFocus{
-    NSError* error = nil;
-    NSArray *devices = [AVCaptureDevice devices];
-    
-    for (AVCaptureDevice *device in devices) {
-        if ([device position] == AVCaptureDevicePositionBack) {
-            [device lockForConfiguration:&error];
-            if ([device isFocusModeSupported:AVCaptureFocusModeContinuousAutoFocus])
-            {
-                CGPoint autofocusPoint = CGPointMake(0.5f, 0.5f);
-                [device setFocusPointOfInterest:autofocusPoint];
-                [device setFocusMode:AVCaptureFocusModeContinuousAutoFocus];
-            }
-            
-            [device unlockForConfiguration];
-        }
-    }
- 		 
-    [NSThread sleepForTimeInterval:1.0f];
 }
 
 
@@ -414,15 +415,15 @@ parentViewController:(UIViewController*)parentViewController
         [device setFocusModeLockedWithLensPosition:0.1f completionHandler:^(CMTime time) { } ];
         [device unlockForConfiguration];
     }
-
+    
     
     //
     // Input
-    //    
-
+    //
+    
     AVCaptureDeviceInput* input = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
     if (!input) return @"unable to obtain video capture device input";
-
+    
     captureSession.sessionPreset = AVCaptureSessionPresetMedium;
     
     if ([captureSession canAddInput:input]) {
@@ -431,14 +432,14 @@ parentViewController:(UIViewController*)parentViewController
     else {
         return @"unable to add video capture device input to session";
     }
-     
+    
     //
     // Output
-    //    
-
+    //
+    
     AVCaptureMetadataOutput* output = [[AVCaptureMetadataOutput alloc] init];
     if (!output) return @"unable to obtain metadata capture output";
-
+    
     //add the output to the session before setting metadataobject types.
     if ([captureSession canAddOutput:output]) {
         [captureSession addOutput:output];
@@ -446,24 +447,28 @@ parentViewController:(UIViewController*)parentViewController
     else {
         return @"unable to add video capture output to session";
     }
-
+    
     [output setMetadataObjectsDelegate:self queue:dispatch_get_main_queue()];
     output.metadataObjectTypes = @[
-        AVMetadataObjectTypeUPCECode,
-        AVMetadataObjectTypeCode39Code,
-        AVMetadataObjectTypeEAN13Code,
-        AVMetadataObjectTypeEAN8Code,
-        AVMetadataObjectTypeCode93Code,
-        AVMetadataObjectTypeCode128Code,
-        AVMetadataObjectTypeQRCode,
-        AVMetadataObjectTypeITF14Code,
-        AVMetadataObjectTypeDataMatrixCode
-    ];
-
+                                   /*
+                                    AVMetadataObjectTypeUPCECode,
+                                    AVMetadataObjectTypeCode39Code,
+                                    AVMetadataObjectTypeEAN13Code,
+                                    AVMetadataObjectTypeEAN8Code,
+                                    AVMetadataObjectTypeCode93Code,
+                                    */
+                                   AVMetadataObjectTypeCode128Code,
+                                   /*
+                                    AVMetadataObjectTypeQRCode,
+                                    AVMetadataObjectTypeITF14Code,
+                                    AVMetadataObjectTypeDataMatrixCode
+                                    */
+                                   ];
+    
     if (![captureSession canSetSessionPreset:AVCaptureSessionPresetMedium]) {
         return @"unable to preset medium quality video capture";
     }
-  
+    
     // setup capture preview layer
     self.previewLayer = [AVCaptureVideoPreviewLayer layerWithSession:captureSession];
     
@@ -491,20 +496,20 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
 // convert barcode format to string
 //--------------------------------------------------------------------------
 - (NSString*)formatStringFrom:(NSString*)format {
-   if( [format isEqualToString:AVMetadataObjectTypeUPCECode] ) return @"UPC_E";
-   if( [format isEqualToString:AVMetadataObjectTypeCode39Code] ) return @"CODE_39";
-   // if( [format isEqualToString:AVMetadataObjectTypeCode39Mod43Code] ) return @"";
-   if( [format isEqualToString:AVMetadataObjectTypeEAN13Code] ) return @"EAN_13";
-   if( [format isEqualToString:AVMetadataObjectTypeEAN8Code] ) return @"EAN_8";
-   if( [format isEqualToString:AVMetadataObjectTypeCode93Code] ) return @"CODE_93";
-   if( [format isEqualToString:AVMetadataObjectTypeCode128Code] ) return @"CODE_128";
-   // if( [format isEqualToString:AVMetadataObjectTypePDF417Code] ) return @"";
-   if( [format isEqualToString:AVMetadataObjectTypeQRCode] ) return @"QR_CODE";
-   // if( [format isEqualToString:AVMetadataObjectTypeAztecCode] ) return @"";
-   // if( [format isEqualToString:AVMetadataObjectTypeInterleaved2of5Code] ) return @"";
-   if( [format isEqualToString:AVMetadataObjectTypeITF14Code] ) return @"ITF";
-   if( [format isEqualToString:AVMetadataObjectTypeDataMatrixCode] ) return @"DATA_MATRIX";
-   return @"???";
+    if( [format isEqualToString:AVMetadataObjectTypeUPCECode] ) return @"UPC_E";
+    if( [format isEqualToString:AVMetadataObjectTypeCode39Code] ) return @"CODE_39";
+    // if( [format isEqualToString:AVMetadataObjectTypeCode39Mod43Code] ) return @"";
+    if( [format isEqualToString:AVMetadataObjectTypeEAN13Code] ) return @"EAN_13";
+    if( [format isEqualToString:AVMetadataObjectTypeEAN8Code] ) return @"EAN_8";
+    if( [format isEqualToString:AVMetadataObjectTypeCode93Code] ) return @"CODE_93";
+    if( [format isEqualToString:AVMetadataObjectTypeCode128Code] ) return @"CODE_128";
+    // if( [format isEqualToString:AVMetadataObjectTypePDF417Code] ) return @"";
+    if( [format isEqualToString:AVMetadataObjectTypeQRCode] ) return @"QR_CODE";
+    // if( [format isEqualToString:AVMetadataObjectTypeAztecCode] ) return @"";
+    // if( [format isEqualToString:AVMetadataObjectTypeInterleaved2of5Code] ) return @"";
+    if( [format isEqualToString:AVMetadataObjectTypeITF14Code] ) return @"ITF";
+    if( [format isEqualToString:AVMetadataObjectTypeDataMatrixCode] ) return @"DATA_MATRIX";
+    return @"???";
 }
 
 @end
@@ -536,9 +541,9 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
     self.callback = nil;
     self.stringToEncode = nil;
     
-    #if CLEANUP_REFERENCES    
+#if CLEANUP_REFERENCES
     [super dealloc];
-    #endif
+#endif
 }
 //--------------------------------------------------------------------------
 - (void)generateImage{
@@ -613,13 +618,28 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
 //--------------------------------------------------------------------------
 - (void)dealloc {
     self.view = nil;
-//    self.processor = nil;
+    //    self.processor = nil;
     self.shutterPressed = NO;
     self.alternateXib = nil;
     self.overlayView = nil;
-    #if CLEANUP_REFERENCES    
+#if CLEANUP_REFERENCES
     [super dealloc];
-    #endif
+#endif
+}
+
+- (BOOL)prefersStatusBarHidden {
+    return YES;
+}
+
+- (void) refreshStatusBarAppearance
+{
+    SEL sel = NSSelectorFromString(@"setNeedsStatusBarAppearanceUpdate");
+    if ([self respondsToSelector:sel]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+        [self performSelector:sel withObject:nil];
+#pragma clang diagnostic pop
+    }
 }
 
 //--------------------------------------------------------------------------
@@ -634,6 +654,7 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
     if ([previewLayer.connection isVideoOrientationSupported]) {
         [previewLayer.connection setVideoOrientation:AVCaptureVideoOrientationPortrait];
     }
+    
     
     [self.view.layer insertSublayer:previewLayer below:[[self.view.layer sublayers] objectAtIndex:0]];
     
@@ -664,18 +685,18 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
 }
 
 //--------------------------------------------------------------------------
-- (void)shutterButtonPressed {
-    self.shutterPressed = YES;
-}
-
-//--------------------------------------------------------------------------
 - (IBAction)cancelButtonPressed:(id)sender {
     [self.processor performSelector:@selector(barcodeScanCancelled) withObject:nil afterDelay:0];
 }
 
-- (void)flipCameraButtonPressed:(id)sender
-{
-    [self.processor performSelector:@selector(flipCamera) withObject:nil afterDelay:0];
+//--------------------------------------------------------------------------
+- (IBAction)historyButtonPressed:(id)sender {
+    [self.processor performSelector:@selector(barcodeScanCancelledHistory) withObject:nil afterDelay:0];
+}
+
+//--------------------------------------------------------------------------
+- (IBAction)infoButtonPressed:(id)sender {
+    [self.processor performSelector:@selector(barcodeScanCancelledInfo) withObject:nil afterDelay:0];
 }
 
 //--------------------------------------------------------------------------
@@ -706,15 +727,30 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
     overlayView.autoresizesSubviews = YES;
     overlayView.autoresizingMask    = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     overlayView.opaque              = NO;
-
+    
     UIToolbar* toolbar = [[UIToolbar alloc] init];
     toolbar.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     
     id cancelButton = [[UIBarButtonItem alloc]
-                       initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
+                       initWithTitle:@"Cancel"
+                       style:UIBarButtonItemStylePlain
                        target:(id)self
                        action:@selector(cancelButtonPressed:)
                        ];
+    
+    id historyButton = [[UIBarButtonItem alloc]
+                        initWithTitle:@"History"
+                        style:UIBarButtonItemStylePlain
+                        target:(id)self
+                        action:@selector(historyButtonPressed:)
+                        ];
+    
+    id infoButton = [[UIBarButtonItem alloc]
+                     initWithTitle:@"Info"
+                     style:UIBarButtonItemStylePlain
+                     target:(id)self
+                     action:@selector(infoButtonPressed:)
+                     ];
     
     
     id flexSpace = [[UIBarButtonItem alloc]
@@ -723,26 +759,13 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
                     action:nil
                     ];
     
-    id flipCamera = [[UIBarButtonItem alloc]
-                       initWithBarButtonSystemItem:UIBarButtonSystemItemCamera
-                       target:(id)self
-                       action:@selector(flipCameraButtonPressed:)
-                       ];
     
-#if USE_SHUTTER
-    id shutterButton = [[UIBarButtonItem alloc]
-                        initWithBarButtonSystemItem:UIBarButtonSystemItemCamera
-                        target:(id)self
-                        action:@selector(shutterButtonPressed)
-                        ];
+    toolbar.items = [NSArray arrayWithObjects:cancelButton,flexSpace,historyButton,flexSpace,infoButton, nil];
     
-    toolbar.items = [NSArray arrayWithObjects:flexSpace,cancelButton,flexSpace, flipCamera ,shutterButton,nil];
-#else
-    toolbar.items = [NSArray arrayWithObjects:flexSpace,cancelButton,flexSpace, flipCamera,nil];
-#endif
     bounds = overlayView.bounds;
     
     [toolbar sizeToFit];
+    
     CGFloat toolbarHeight  = [toolbar frame].size.height;
     CGFloat rootViewHeight = CGRectGetHeight(bounds);
     CGFloat rootViewWidth  = CGRectGetWidth(bounds);
@@ -756,10 +779,10 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
     CGFloat minAxis = MIN(rootViewHeight, rootViewWidth);
     
     rectArea = CGRectMake(
-                          0.5 * (rootViewWidth  - minAxis),
-                          0.5 * (rootViewHeight - minAxis),
-                          minAxis,
-                          minAxis
+                          0,
+                          0,
+                          rootViewWidth,
+                          rootViewHeight - toolbarHeight
                           );
     
     [reticleView setFrame:rectArea];
@@ -778,44 +801,29 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
     return overlayView;
 }
 
-//--------------------------------------------------------------------------
-
-#define RETICLE_SIZE    500.0f
-#define RETICLE_WIDTH    10.0f
-#define RETICLE_OFFSET   60.0f
-#define RETICLE_ALPHA     0.4f
 
 //-------------------------------------------------------------------------
 // builds the green box and red line
 //-------------------------------------------------------------------------
 - (UIImage*)buildReticleImage {
     UIImage* result;
-    UIGraphicsBeginImageContext(CGSizeMake(RETICLE_SIZE, RETICLE_SIZE));
+    UIGraphicsBeginImageContext(self.view.bounds.size);
+    
     CGContextRef context = UIGraphicsGetCurrentContext();
     
     if (self.processor.is1D) {
-        UIColor* color = [UIColor colorWithRed:1.0 green:0.0 blue:0.0 alpha:RETICLE_ALPHA];
+        UIColor* color = [UIColor colorWithRed:1.0 green:0.0 blue:0.0 alpha:0.4f];
         CGContextSetStrokeColorWithColor(context, color.CGColor);
-        CGContextSetLineWidth(context, RETICLE_WIDTH);
+        
+        CGContextSetLineWidth(context, 2.0f);
+        
         CGContextBeginPath(context);
-        CGFloat lineOffset = RETICLE_OFFSET+(0.5*RETICLE_WIDTH);
-        CGContextMoveToPoint(context, lineOffset, RETICLE_SIZE/2);
-        CGContextAddLineToPoint(context, RETICLE_SIZE-lineOffset, 0.5*RETICLE_SIZE);
+        
+        CGContextMoveToPoint(context, 0.5 * self.view.bounds.size.width, 0);
+        
+        CGContextAddLineToPoint(context, 0.5 * self.view.bounds.size.width, self.view.bounds.size.height);
+        
         CGContextStrokePath(context);
-    }
-    
-    if (self.processor.is2D) {
-        UIColor* color = [UIColor colorWithRed:0.0 green:1.0 blue:0.0 alpha:RETICLE_ALPHA];
-        CGContextSetStrokeColorWithColor(context, color.CGColor);
-        CGContextSetLineWidth(context, RETICLE_WIDTH);
-        CGContextStrokeRect(context,
-                            CGRectMake(
-                                       RETICLE_OFFSET,
-                                       RETICLE_OFFSET,
-                                       RETICLE_SIZE-2*RETICLE_OFFSET,
-                                       RETICLE_SIZE-2*RETICLE_OFFSET
-                                       )
-                            );
     }
     
     result = UIGraphicsGetImageFromCurrentImageContext();
