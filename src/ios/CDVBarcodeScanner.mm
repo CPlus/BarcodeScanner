@@ -47,6 +47,11 @@
 // plugin class
 //------------------------------------------------------------------------------
 @interface CDVBarcodeScanner : CDVPlugin {}
+
+@property (nonatomic, retain) NSString*                   topLabelText;
+@property (nonatomic, retain) NSString*                   bottomLabelText;
+
+- (void) pluginInitialize;
 - (NSString*)isScanNotPossible;
 - (void)scan:(CDVInvokedUrlCommand*)command;
 - (void)encode:(CDVInvokedUrlCommand*)command;
@@ -109,6 +114,8 @@
 @property (nonatomic, retain) IBOutlet UIView* overlayView;
 // unsafe_unretained is equivalent to assign - used to prevent retain cycles in the property below
 @property (nonatomic, unsafe_unretained) id orientationDelegate;
+@property (nonatomic, retain) UILabel *topUILabel;
+@property (nonatomic, retain) UILabel *bottomUILabel;
 
 - (id)initWithProcessor:(CDVbcsProcessor*)processor alternateOverlay:(NSString *)alternateXib;
 - (void)startCapturing;
@@ -124,6 +131,11 @@
 // plugin class
 //------------------------------------------------------------------------------
 @implementation CDVBarcodeScanner
+
+- (void)pluginInitialize {
+    self.topLabelText = @"Barcode scanning instructions";
+    self.bottomLabelText = @"Place a barcode inside the viewfinder rectangle to scan it.";
+}
 
 //--------------------------------------------------------------------------
 - (NSString*)isScanNotPossible {
@@ -147,15 +159,26 @@
     
     // We allow the user to define an alternate xib file for loading the overlay.
     NSString *overlayXib = nil;
-    if ( [command.arguments count] >= 1 )
-    {
-        overlayXib = [command.arguments objectAtIndex:0];
-    }
+    //    if ( [command.arguments count] >= 1 )
+    //    {
+    //        overlayXib = [command.arguments objectAtIndex:0];
+    //    }
     
     capabilityError = [self isScanNotPossible];
     if (capabilityError) {
         [self returnError:capabilityError callback:callback];
         return;
+    }
+    
+    //    if ( [command.arguments count] >= 1 )
+    //    {
+    //        overlayXib = [command.arguments objectAtIndex:0];
+    //    }
+    
+    if ( [command.arguments count] >= 2 )
+    {
+        self.topLabelText = [NSString stringWithString:command.arguments[1][@"topText"]];
+        self.bottomLabelText = [NSString stringWithString:command.arguments[1][@"bottomText"]];
     }
     
     processor = [[CDVbcsProcessor alloc]
@@ -714,6 +737,8 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
 }
 
 //--------------------------------------------------------------------------
+#define BARCODE_VIEW_GRAY_ZONE_SIZE 0.1f
+#define DEGREES_TO_RADIANS(x) (M_PI * x / 180.0)
 - (UIView*)buildOverlayView {
     
     if ( nil != self.alternateXib )
@@ -782,7 +807,37 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
                           );
     
     UIImage* reticleImage = [self buildReticleImage:rectArea];
-    UIView* reticleView = [[UIImageView alloc] initWithImage: reticleImage];
+    UIView* reticleView = [[UIView alloc]initWithFrame:rectArea];
+    [reticleView setBackgroundColor:[UIColor colorWithPatternImage:reticleImage]];
+    
+    self.topUILabel = [[UILabel alloc]initWithFrame:CGRectMake(
+                                                               (1.0f - (0.5f * BARCODE_VIEW_GRAY_ZONE_SIZE)) * rectArea.size.width - (0.5f * rectArea.size.height),
+                                                               0.5f * rectArea.size.height - 0.5f * BARCODE_VIEW_GRAY_ZONE_SIZE * rectArea.size.width,
+                                                               rectArea.size.height,
+                                                               BARCODE_VIEW_GRAY_ZONE_SIZE * rectArea.size.width
+                                                               )];
+    
+    self.topUILabel.text=self.processor.plugin.topLabelText;
+    self.topUILabel.textAlignment = NSTextAlignmentCenter;
+    self.topUILabel.textColor = [UIColor whiteColor];
+    self.topUILabel.transform= CGAffineTransformMakeRotation(DEGREES_TO_RADIANS(90));
+    self.topUILabel.backgroundColor=[[UIColor blackColor]colorWithAlphaComponent:0.4f];
+    [self.view addSubview:self.topUILabel];
+    
+    
+    self.bottomUILabel = [[UILabel alloc]initWithFrame:CGRectMake(
+                                                                  (0.5f * BARCODE_VIEW_GRAY_ZONE_SIZE) * rectArea.size.width - (0.5f * rectArea.size.height),
+                                                                  0.5f * rectArea.size.height - 0.5f * BARCODE_VIEW_GRAY_ZONE_SIZE * rectArea.size.width,
+                                                                  rectArea.size.height,
+                                                                  BARCODE_VIEW_GRAY_ZONE_SIZE * rectArea.size.width
+                                                                  )];
+    self.bottomUILabel.text=self.processor.plugin.bottomLabelText;
+    self.bottomUILabel.textAlignment = NSTextAlignmentCenter;
+    self.bottomUILabel.textColor = [UIColor whiteColor];
+    self.bottomUILabel.transform= CGAffineTransformMakeRotation(DEGREES_TO_RADIANS(90));
+    self.bottomUILabel.backgroundColor=[[UIColor blackColor]colorWithAlphaComponent:0.4f];
+    [self.view addSubview:self.bottomUILabel];
+    
     
     [reticleView setFrame:rectArea];
     
@@ -805,7 +860,6 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
 // builds the green box and red line
 //-------------------------------------------------------------------------
 
-#define BARCODE_VIEW_GRAY_ZONE_SIZE 0.1f
 
 - (UIImage*)buildReticleImage:(CGRect)rect {
     UIImage* result;
@@ -827,21 +881,6 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
         
         CGContextStrokePath(context);
     }
-    
-    UIColor* bgcolor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.4f];
-    
-    CGContextSetFillColorWithColor(context, bgcolor.CGColor);
-    
-    CGContextSetLineWidth(context, 0.0f);
-    
-    CGContextFillRect(context, CGRectMake(
-                                          0, 0,
-                                          BARCODE_VIEW_GRAY_ZONE_SIZE * rect.size.width, rect.size.height
-                                          ));
-    CGContextFillRect(context, CGRectMake(
-                                          (1.0f - BARCODE_VIEW_GRAY_ZONE_SIZE) * rect.size.width, 0,
-                                          BARCODE_VIEW_GRAY_ZONE_SIZE * rect.size.width, rect.size.height
-                                          ));
     
     result = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
