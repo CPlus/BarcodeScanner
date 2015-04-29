@@ -113,7 +113,7 @@
 - (id)initWithProcessor:(CDVbcsProcessor*)processor alternateOverlay:(NSString *)alternateXib;
 - (void)startCapturing;
 - (UIView*)buildOverlayView;
-- (UIImage*)buildReticleImage;
+- (UIImage*)buildReticleImage:(CGRect)rect;
 - (IBAction)cancelButtonPressed:(id)sender;
 - (IBAction)historyButtonPressed:(id)sender;
 - (IBAction)infoButtonPressed:(id)sender;
@@ -412,7 +412,7 @@ parentViewController:(UIViewController*)parentViewController
         device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
         if (!device) return @"unable to obtain video capture device";
         [device lockForConfiguration:&error];
-        [device setFocusModeLockedWithLensPosition:0.1f completionHandler:^(CMTime time) { } ];
+        [device setFocusMode:AVCaptureFocusModeContinuousAutoFocus];
         [device unlockForConfiguration];
     }
     
@@ -774,16 +774,15 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
     
     [overlayView addSubview: toolbar];
     
-    UIImage* reticleImage = [self buildReticleImage];
-    UIView* reticleView = [[UIImageView alloc] initWithImage: reticleImage];
-    CGFloat minAxis = MIN(rootViewHeight, rootViewWidth);
-    
     rectArea = CGRectMake(
                           0,
                           0,
                           rootViewWidth,
                           rootViewHeight - toolbarHeight
                           );
+    
+    UIImage* reticleImage = [self buildReticleImage:rectArea];
+    UIView* reticleView = [[UIImageView alloc] initWithImage: reticleImage];
     
     [reticleView setFrame:rectArea];
     
@@ -805,9 +804,12 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
 //-------------------------------------------------------------------------
 // builds the green box and red line
 //-------------------------------------------------------------------------
-- (UIImage*)buildReticleImage {
+
+#define BARCODE_VIEW_GRAY_ZONE_SIZE 0.1f
+
+- (UIImage*)buildReticleImage:(CGRect)rect {
     UIImage* result;
-    UIGraphicsBeginImageContext(self.view.bounds.size);
+    UIGraphicsBeginImageContext(rect.size);
     
     CGContextRef context = UIGraphicsGetCurrentContext();
     
@@ -819,12 +821,27 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
         
         CGContextBeginPath(context);
         
-        CGContextMoveToPoint(context, 0.5 * self.view.bounds.size.width, 0);
+        CGContextMoveToPoint(context, 0.5 * rect.size.width, 0);
         
-        CGContextAddLineToPoint(context, 0.5 * self.view.bounds.size.width, self.view.bounds.size.height);
+        CGContextAddLineToPoint(context, 0.5 * rect.size.width, rect.size.height);
         
         CGContextStrokePath(context);
     }
+    
+    UIColor* bgcolor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.4f];
+    
+    CGContextSetFillColorWithColor(context, bgcolor.CGColor);
+    
+    CGContextSetLineWidth(context, 0.0f);
+    
+    CGContextFillRect(context, CGRectMake(
+                                          0, 0,
+                                          BARCODE_VIEW_GRAY_ZONE_SIZE * rect.size.width, rect.size.height
+                                          ));
+    CGContextFillRect(context, CGRectMake(
+                                          (1.0f - BARCODE_VIEW_GRAY_ZONE_SIZE) * rect.size.width, 0,
+                                          BARCODE_VIEW_GRAY_ZONE_SIZE * rect.size.width, rect.size.height
+                                          ));
     
     result = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
