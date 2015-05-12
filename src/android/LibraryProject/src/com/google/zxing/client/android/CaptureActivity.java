@@ -201,6 +201,13 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     layout.addView(statusViewTop);
     statusViewTop.setHeight(screenheight / 10);
     
+    Intent intent = getIntent();
+    
+    if(intent.hasExtra("topText"))
+    	statusViewTop.setText(intent.getStringExtra("topText"));
+    if(intent.hasExtra("bottomText"))
+        statusView.setText(intent.getStringExtra("bottomText"));
+    
 
     handler = null;
     lastResult = null;
@@ -222,8 +229,6 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     beepManager.updatePrefs();
 
     inactivityTimer.onResume();
-
-    Intent intent = getIntent();
 
     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
     copyToClipboard = prefs.getBoolean(PreferencesActivity.KEY_COPY_TO_CLIPBOARD, true)
