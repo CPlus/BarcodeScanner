@@ -203,12 +203,6 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     
     Intent intent = getIntent();
     
-    if(intent.hasExtra("topText"))
-    	statusViewTop.setText(intent.getStringExtra("topText"));
-    if(intent.hasExtra("bottomText"))
-        statusView.setText(intent.getStringExtra("bottomText"));
-    
-
     handler = null;
     lastResult = null;
 
@@ -258,10 +252,21 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
           }
         }
         
-        String customPromptMessage = intent.getStringExtra(Intents.Scan.PROMPT_MESSAGE);
+        /*String customPromptMessage = intent.getStringExtra(Intents.Scan.PROMPT_MESSAGE);
         if (customPromptMessage != null) {
           statusView.setText(customPromptMessage);
-        }
+        }*/
+        
+        if(intent.hasExtra("topText"))
+        	statusViewTop.setText(intent.getStringExtra("topText"));
+        else
+        	statusViewTop.setText("This is a top message");
+        if(intent.hasExtra("bottomText"))
+            statusView.setText(intent.getStringExtra("bottomText"));
+        else
+        	statusView.setText("This is a bottom message");
+        
+
 
       } else if (dataString != null &&
                  dataString.contains(PRODUCT_SEARCH_URL_PREFIX) &&
