@@ -59,11 +59,13 @@ import android.view.MenuItem;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.FrameLayout.LayoutParams;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -119,6 +121,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
   
   private TextView statusViewTop;
   private TextView statusView;
+  private ImageButton historyButton;
+  private ImageButton infoButton;
   
   private View resultView;
   private Result lastResult;
@@ -200,6 +204,45 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     
     layout.addView(statusViewTop);
     statusViewTop.setHeight(screenheight / 10);
+    
+    int btnSize = screenheight / 5;
+    historyButton = new ImageButton(getApplicationContext());
+    historyButton.setImageResource(fakeR.getId("drawable", "launcher_icon"));
+    historyButton.setBackgroundColor(Color.TRANSPARENT);
+    FrameLayout.LayoutParams historyParams = new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.LEFT | Gravity.BOTTOM);
+    historyParams.height = btnSize;
+    historyParams.width = btnSize;
+    historyButton.setLayoutParams(historyParams);
+    layout.addView(historyButton);
+    
+    historyButton.setOnClickListener(new OnClickListener() {
+		@Override
+		public void onClick(View v) {
+			Intent result = new Intent();
+			result.putExtra("GET_INFO", "history");
+			setResult(Activity.RESULT_CANCELED, result);
+	        finish();
+		}
+	});
+    
+    infoButton = new ImageButton(getApplicationContext());
+    infoButton.setImageResource(fakeR.getId("drawable", "launcher_icon"));
+    infoButton.setBackgroundColor(Color.TRANSPARENT);
+    FrameLayout.LayoutParams infoParams = new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.RIGHT | Gravity.BOTTOM);
+    infoParams.height = btnSize;
+    infoParams.width = btnSize;
+    infoButton.setLayoutParams(infoParams);
+    layout.addView(infoButton);
+    
+    infoButton.setOnClickListener(new OnClickListener() {
+		@Override
+		public void onClick(View v) {
+			Intent result = new Intent();
+			result.putExtra("GET_INFO", "info");
+			setResult(Activity.RESULT_CANCELED, result);
+	        finish();
+		}
+	});
     
     Intent intent = getIntent();
     
