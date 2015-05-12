@@ -39,7 +39,9 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Point;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -48,6 +50,8 @@ import android.preference.PreferenceManager;
 import android.text.ClipboardManager;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.Display;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -58,9 +62,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
+import android.widget.FrameLayout.LayoutParams;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import com.google.zxing.FakeR;
 
 import java.io.IOException;
@@ -109,7 +116,10 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
   private CaptureActivityHandler handler;
   private Result savedResultToShow;
   private ViewfinderView viewfinderView;
+  
+  private TextView statusViewTop;
   private TextView statusView;
+  
   private View resultView;
   private Result lastResult;
   private boolean hasSurface;
@@ -166,12 +176,31 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     // first launch. That led to bugs where the scanning rectangle was the wrong size and partially
     // off screen.
     cameraManager = new CameraManager(getApplication());
+    
+    Display display = getWindowManager().getDefaultDisplay();
+    Point size = new Point();
+    display.getSize(size);
+    int screenwidth = size.x;
+    int screenheight = size.y;
 
     viewfinderView = (ViewfinderView) findViewById(fakeR.getId("id", "viewfinder_view"));
     viewfinderView.setCameraManager(cameraManager);
 
     resultView = findViewById(fakeR.getId("id", "result_view"));
     statusView = (TextView) findViewById(fakeR.getId("id", "status_view"));
+    statusView.setHeight(screenheight / 10);
+    
+    statusViewTop = new TextView(getApplicationContext());
+    statusViewTop.setGravity(Gravity.CENTER);
+    statusViewTop.setText("TOP MESSAGE");
+    FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL | Gravity.TOP);
+    statusViewTop.setLayoutParams(params);
+    
+    FrameLayout layout = (FrameLayout)findViewById(fakeR.getId("id", "frameViewEr"));
+    
+    layout.addView(statusViewTop);
+    statusViewTop.setHeight(screenheight / 10);
+    
 
     handler = null;
     lastResult = null;
