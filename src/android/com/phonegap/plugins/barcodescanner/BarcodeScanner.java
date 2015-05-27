@@ -179,7 +179,7 @@ public class BarcodeScanner extends CordovaPlugin {
                 //this.success(new PluginResult(PluginResult.Status.OK, obj), this.callback);
                 this.callbackContext.success(obj);
             } else if (resultCode == Activity.RESULT_CANCELED) {
-                if(intent.hasExtra("GET_INFO")) {
+                if(intent != null && intent.hasExtra("GET_INFO")) {
                     JSONObject obj = new JSONObject();
                     try {
                         obj.put(TEXT, "GET_INFO");
