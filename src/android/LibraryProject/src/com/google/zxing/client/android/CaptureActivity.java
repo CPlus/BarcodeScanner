@@ -63,9 +63,9 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.FrameLayout.LayoutParams;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -121,8 +121,8 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
   
   private TextView statusViewTop;
   private TextView statusView;
-  private ImageButton historyButton;
-  private ImageButton infoButton;
+  private Button historyButton;
+  private Button infoButton;
   
   private View resultView;
   private Result lastResult;
@@ -205,14 +205,17 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
     layout.addView(statusViewTop);
     statusViewTop.setHeight(screenheight / 10);
     
-    int btnSize = screenheight / 5;
-    historyButton = new ImageButton(getApplicationContext());
-    historyButton.setImageResource(fakeR.getId("drawable", "launcher_icon"));
-    historyButton.setBackgroundColor(Color.TRANSPARENT);
+    int btnSize = screenheight / 4;
+    int bgColor = Color.argb(80, 0, 0, 0);
+    
+    historyButton = new Button(getApplicationContext());
+    historyButton.setBackgroundResource(fakeR.getId("drawable", "launcher_icon"));
+    historyButton.setBackgroundColor(bgColor);
     FrameLayout.LayoutParams historyParams = new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.LEFT | Gravity.BOTTOM);
-    historyParams.height = btnSize;
+    historyParams.height = screenheight / 10;
     historyParams.width = btnSize;
     historyButton.setLayoutParams(historyParams);
+    historyButton.setText("History");
     layout.addView(historyButton);
     
     historyButton.setOnClickListener(new OnClickListener() {
@@ -225,13 +228,14 @@ public final class CaptureActivity extends Activity implements SurfaceHolder.Cal
 		}
 	});
     
-    infoButton = new ImageButton(getApplicationContext());
-    infoButton.setImageResource(fakeR.getId("drawable", "launcher_icon"));
-    infoButton.setBackgroundColor(Color.TRANSPARENT);
+    infoButton = new Button(getApplicationContext());
+    infoButton.setBackgroundResource(fakeR.getId("drawable", "launcher_icon"));
+    infoButton.setBackgroundColor(bgColor);
     FrameLayout.LayoutParams infoParams = new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.RIGHT | Gravity.BOTTOM);
-    infoParams.height = btnSize;
+    infoParams.height = screenheight / 10;
     infoParams.width = btnSize;
     infoButton.setLayoutParams(infoParams);
+    infoButton.setText("Info");
     layout.addView(infoButton);
     
     infoButton.setOnClickListener(new OnClickListener() {
