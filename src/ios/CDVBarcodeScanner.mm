@@ -745,16 +745,16 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
     {
         return [self buildOverlayViewFromXib];
     }
-    CGRect bounds = self.view.bounds;
+    CGRect bounds = [[UIScreen mainScreen] bounds];
     bounds = CGRectMake(0, 0, bounds.size.width, bounds.size.height);
     
     UIView* overlayView = [[UIView alloc] initWithFrame:bounds];
     overlayView.autoresizesSubviews = YES;
-    overlayView.autoresizingMask    = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    overlayView.autoresizingMask    = 0;//UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     overlayView.opaque              = NO;
     
     UIToolbar* toolbar = [[UIToolbar alloc] init];
-    toolbar.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
+    toolbar.autoresizingMask = 0;//UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     
     id cancelButton = [[UIBarButtonItem alloc]
                        initWithTitle:@"Cancel"
@@ -786,8 +786,6 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
     
     
     toolbar.items = [NSArray arrayWithObjects:cancelButton,flexSpace,historyButton,flexSpace,infoButton, nil];
-    
-    bounds = overlayView.bounds;
     
     [toolbar sizeToFit];
     
@@ -844,10 +842,10 @@ didOutputMetadataObjects:(NSArray *)metadataObjects
     reticleView.opaque           = NO;
     reticleView.contentMode      = UIViewContentModeScaleAspectFit;
     reticleView.autoresizingMask = 0
-    | UIViewAutoresizingFlexibleLeftMargin
-    | UIViewAutoresizingFlexibleRightMargin
-    | UIViewAutoresizingFlexibleTopMargin
-    | UIViewAutoresizingFlexibleBottomMargin
+    //| UIViewAutoresizingFlexibleLeftMargin
+    //| UIViewAutoresizingFlexibleRightMargin
+    //| UIViewAutoresizingFlexibleTopMargin
+    //| UIViewAutoresizingFlexibleBottomMargin
     ;
     
     [overlayView addSubview: reticleView];
