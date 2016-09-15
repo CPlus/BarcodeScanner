@@ -9,7 +9,7 @@
 
     <repo>https://github.com/wildabeast/BarcodeScanner</repo>
     <issue>https://github.com/wildabeast/BarcodeScanner/issues</issue>
-
+    <preference name="CAMERA_USAGE_DESCRIPTION" default="To scan barcodes"/>
     <engines>
         <engine name="cordova" version=">=3.0.0" />
     </engines>
