@@ -348,6 +348,7 @@ parentViewController:(UIViewController*)parentViewController
 
 //--------------------------------------------------------------------------
 - (void)openDialog {
+    self.viewController.modalPresentationStyle = UIModalPresentationFullScreen;
     [self.parentViewController
      presentViewController:self.viewController
      animated:YES completion:nil
